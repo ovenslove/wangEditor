@@ -46,8 +46,9 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             selectLinkElem()
             editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         } else {
+            console.log(insertContent())
             // 选区未处于链接中，直接插入即可
-            editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
+            // editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         }
     }
 
@@ -82,6 +83,43 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             editor.config.customAlert(check, 'warning')
         }
         return false
+    }
+
+    /**
+     * 生成需要插入的html内容的字符串形式
+     */
+    function insertContent() {
+        editor.selection.restoreSelection()
+        const selection = window.getSelection()
+        const anchorNode = selection?.anchorNode
+        console.log(anchorNode)
+        let content
+        if (anchorNode) {
+            content = makeHtmlString(anchorNode)
+            return content
+        }
+    }
+
+    /**
+     * 生成html的string形式
+     */
+    function makeHtmlString(node: Node | null): string {
+        if (!node) return ''
+        const nodeName: string = node.nodeName
+        const parentNode: Node | null = node.parentNode
+        const parentNodeName: string | undefined = parentNode?.nodeName
+        let tagNameStart: string = ''
+        let tagNameEnd: string = ''
+        if (nodeName !== '#text') {
+            tagNameStart = `<${nodeName.toLowerCase()}>`
+            tagNameEnd = `</${nodeName.toLowerCase()}>`
+        }
+        if (parentNodeName === 'P') return ''
+        // const content: string = parentNode?.nodeValue ? parentNode.nodeValue : makeHtmlString(parentNode)
+
+        const content: string = node?.nodeValue ? node.nodeValue : makeHtmlString(parentNode)
+
+        return `${tagNameStart}${content}${tagNameEnd}`
     }
 
     const conf = {

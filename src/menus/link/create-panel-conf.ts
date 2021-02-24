@@ -92,34 +92,54 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         editor.selection.restoreSelection()
         const selection = window.getSelection()
         const anchorNode = selection?.anchorNode
-        console.log(anchorNode)
-        let content
-        if (anchorNode) {
-            content = makeHtmlString(anchorNode)
-            return content
+        const focusNode = selection?.focusNode
+        const startPos = selection?.anchorOffset
+        const endPos = selection?.focusOffset
+        let startParentNodeName = anchorNode?.parentNode?.nodeName
+        const endParentNodeName = focusNode?.parentNode?.nodeName
+
+        let content = ""
+        let startContent: string | undefined = ""
+        let endContent: string | undefined = ""
+
+        if (startPos === 0 || startPos) {
+            let selectContent = anchorNode?.textContent?.substring(startPos)
+            startContent = makeHtmlString(startParentNodeName ?? "", selectContent ?? "")
+            let startNode = anchorNode
+            let startNodeName = startNode?.nodeName
+            // while (true) {
+            //     if (startNodeName === "P") break
+
+            //     startContent = makeHtmlString("i", startContent)
+            // }
         }
+
+        if (endPos) {
+            let selectContent = focusNode?.textContent?.substring(0, endPos)
+            endContent = makeHtmlString(endParentNodeName ?? "", selectContent ?? "")
+        }
+
+        content = `${startContent}${endContent}`
+
+        return content
+
+
+
     }
+
+
+
 
     /**
      * 生成html的string形式
      */
-    function makeHtmlString(node: Node | null): string {
-        if (!node) return ''
-        const nodeName: string = node.nodeName
-        const parentNode: Node | null = node.parentNode
-        const parentNodeName: string | undefined = parentNode?.nodeName
-        let tagNameStart: string = ''
-        let tagNameEnd: string = ''
-        if (nodeName !== '#text') {
-            tagNameStart = `<${nodeName.toLowerCase()}>`
-            tagNameEnd = `</${nodeName.toLowerCase()}>`
+    function makeHtmlString(tagName: string, content: string): string {
+        if (tagName === "") {
+            return content
         }
-        if (parentNodeName === 'P') return ''
-        // const content: string = parentNode?.nodeValue ? parentNode.nodeValue : makeHtmlString(parentNode)
+        tagName = tagName.toLowerCase()
+        return `<${tagName}>${content}</${tagName}>`
 
-        const content: string = node?.nodeValue ? node.nodeValue : makeHtmlString(parentNode)
-
-        return `${tagNameStart}${content}${tagNameEnd}`
     }
 
     const conf = {

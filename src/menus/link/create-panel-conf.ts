@@ -93,33 +93,72 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         const selection = window.getSelection()
         const anchorNode = selection?.anchorNode
         const focusNode = selection?.focusNode
-        const startPos = selection?.anchorOffset
-        const endPos = selection?.focusOffset
-        let startParentNodeName = anchorNode?.parentNode?.nodeName
-        const endParentNodeName = focusNode?.parentNode?.nodeName
+        const anchorPos = selection?.anchorOffset
+        const focusPos = selection?.focusOffset
+        const anchoreParentNode = anchorNode?.parentNode
+        const focusParentNode = focusNode?.parentNode
+        const anchorParentNodeName = anchorNode?.parentNode?.nodeName
+        const focusParentNodeName = focusNode?.parentNode?.nodeName
 
         let content = ""
         let startContent: string | undefined = ""
+        let middleContent: string = ""
         let endContent: string | undefined = ""
 
-        if (startPos === 0 || startPos) {
-            let selectContent = anchorNode?.textContent?.substring(startPos)
-            startContent = makeHtmlString(startParentNodeName ?? "", selectContent ?? "")
-            let startNode = anchorNode
-            let startNodeName = startNode?.nodeName
-            // while (true) {
-            //     if (startNodeName === "P") break
+        let startNode = anchoreParentNode ?? anchorNode
+        let startNodeName = startNode?.nodeName
 
-            //     startContent = makeHtmlString("i", startContent)
-            // }
+        let endNode = focusParentNode
+        let endNodeName = endNode?.nodeName
+
+        // 选中开始位置节点的处理
+        if (anchorPos === 0 || anchorPos) {
+            let selectContent = anchorNode?.textContent?.substring(anchorPos)
+            if (anchorNode?.nodeName !== "#text") {
+
+                startContent = makeHtmlString(anchorParentNodeName ?? "", selectContent ?? "")
+
+                while (true) {
+                    if (startNode?.parentNode?.nodeName === "P") break
+                    startNode = startNode?.parentNode
+                    startNodeName = startNode?.nodeName
+                    startContent = makeHtmlString(startNodeName ?? "", startContent)
+
+                }
+            } else {
+                startContent = makeHtmlString(anchorNode.nodeName, selectContent ?? "")
+            }
+
         }
 
-        if (endPos) {
-            let selectContent = focusNode?.textContent?.substring(0, endPos)
-            endContent = makeHtmlString(endParentNodeName ?? "", selectContent ?? "")
+        // 结束位置节点的处理
+        if (focusPos) {
+            let selectContent = focusNode?.textContent?.substring(0, focusPos)
+            endContent = makeHtmlString(focusParentNodeName ?? "", selectContent ?? "")
+
+            while (true) {
+                if (endNode?.parentNode?.nodeName === "P") break
+                endNode = endNode?.parentNode
+                endNodeName = endNode?.nodeName
+                endContent = makeHtmlString(endNodeName ?? "", endContent)
+
+            }
         }
 
-        content = `${startContent}${endContent}`
+        // 处于开始和结束节点位置之间的节点的处理
+        if (!startNode?.isEqualNode(endNode ?? null)) {
+            console.log("middle")
+            let nextNode = startNode?.nextSibling
+            console.log(nextNode)
+            let nextNodeName = nextNode?.nodeName
+            let content = nextNode?.textContent
+            if (nextNodeName !== "#text") {
+                content = nextNode?.firstChild?.parentElement?.innerHTML
+            }
+            middleContent = makeHtmlString(nextNodeName ?? "", content ?? "")
+        }
+
+        content = `${startContent}${middleContent}${endContent}`
 
         return content
 
@@ -134,7 +173,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
      * 生成html的string形式
      */
     function makeHtmlString(tagName: string, content: string): string {
-        if (tagName === "") {
+        if (tagName === "" || tagName === "#text") {
             return content
         }
         tagName = tagName.toLowerCase()

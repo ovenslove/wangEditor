@@ -46,8 +46,8 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             selectLinkElem()
             editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         } else {
-            console.log(insertContent())
             // 选区未处于链接中，直接插入即可
+            console.log(text)
             // editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         }
     }
@@ -95,7 +95,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         const focusNode = selection?.focusNode
         const anchorPos = selection?.anchorOffset
         const focusPos = selection?.focusOffset
-        const anchoreParentNode = anchorNode?.parentNode
+        const anchorParentNode = anchorNode?.parentNode
         const focusParentNode = focusNode?.parentNode
         const anchorParentNodeName = anchorNode?.parentNode?.nodeName
         const focusParentNodeName = focusNode?.parentNode?.nodeName
@@ -105,58 +105,86 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         let middleContent: string = ""
         let endContent: string | undefined = ""
 
-        let startNode = anchoreParentNode ?? anchorNode
-        let startNodeName = startNode?.nodeName
+        let startNode = anchorNode
+        let endNode = focusNode
+        // 用来保存 anchorNode的非p最外层节点
+        let pointerNode = anchorNode
 
-        let endNode = focusParentNode
-        let endNodeName = endNode?.nodeName
+        // 节点是同一个的处理
+        if (anchorNode?.isEqualNode(focusNode ?? null)) {
+            return anchorNode.textContent?.substring(anchorPos ?? 0, focusPos)
+        }
 
         // 选中开始位置节点的处理
-        if (anchorPos === 0 || anchorPos) {
-            let selectContent = anchorNode?.textContent?.substring(anchorPos)
-            if (anchorNode?.nodeName !== "#text") {
+        let selectContent = startNode?.textContent?.substring(anchorPos ?? 0)
+        do {
+            startNode = pointerNode
+            startContent = makeHtmlString(startNode?.nodeName ?? "", selectContent ?? "")
+            selectContent = startContent
+            pointerNode = pointerNode?.parentNode
+        } while (pointerNode?.nodeName !== "P")
+        // while(true) {
+        //     if(startNode?.parentNode?.nodeName === "P") break
+        //     if(startNode)
+        // }
+        // let selectContent = startNode?.textContent?.substring(anchorPos ?? 0)
+        // if (startNode?.nodeName !== "#text") {
+        //     startContent = makeHtmlString(anchorParentNodeName ?? "", selectContent ?? "")
 
-                startContent = makeHtmlString(anchorParentNodeName ?? "", selectContent ?? "")
+        //     while (true) {
+        //         if (startNode?.parentNode?.nodeName === "P") break
+        //         startNode = startNode?.parentNode
+        //         startNodeName = startNode?.nodeName
+        //         startContent = makeHtmlString(startNodeName ?? "", startContent)
+        //     }
+        // } else {
+        //     startNode = anchorNode
+        //     startContent = makeHtmlString(anchorNode.nodeName, selectContent ?? "")
+        // }
 
-                while (true) {
-                    if (startNode?.parentNode?.nodeName === "P") break
-                    startNode = startNode?.parentNode
-                    startNodeName = startNode?.nodeName
-                    startContent = makeHtmlString(startNodeName ?? "", startContent)
-
-                }
-            } else {
-                startContent = makeHtmlString(anchorNode.nodeName, selectContent ?? "")
-            }
-
-        }
 
         // 结束位置节点的处理
-        if (focusPos) {
-            let selectContent = focusNode?.textContent?.substring(0, focusPos)
-            endContent = makeHtmlString(focusParentNodeName ?? "", selectContent ?? "")
+        let endSelectContent = focusNode?.textContent?.substring(0, focusPos)
+        pointerNode = focusNode
+        do {
+            endNode = pointerNode
+            endContent = makeHtmlString(endNode?.nodeName ?? "", endSelectContent ?? "")
+            endSelectContent = endContent
+            pointerNode = pointerNode?.parentNode
+        } while (pointerNode?.nodeName !== "P")
+        console.log(startNode)
+        console.log(endNode)
 
-            while (true) {
-                if (endNode?.parentNode?.nodeName === "P") break
-                endNode = endNode?.parentNode
-                endNodeName = endNode?.nodeName
-                endContent = makeHtmlString(endNodeName ?? "", endContent)
-
-            }
-        }
-
+        // 将直接节点位置放置到开始的节点
+        pointerNode = startNode
         // 处于开始和结束节点位置之间的节点的处理
-        if (!startNode?.isEqualNode(endNode ?? null)) {
-            console.log("middle")
-            let nextNode = startNode?.nextSibling
-            console.log(nextNode)
-            let nextNodeName = nextNode?.nodeName
-            let content = nextNode?.textContent
-            if (nextNodeName !== "#text") {
-                content = nextNode?.firstChild?.parentElement?.innerHTML
+        while (!pointerNode?.isEqualNode(endNode ?? null)) {
+            const nextNode = pointerNode?.nextSibling
+            const nextNodeName = nextNode?.nodeName
+            if (nextNodeName === "#text") {
+                middleContent = middleContent + nextNode?.textContent
+            } else {
+                let htmlString = nextNode?.firstChild?.parentElement?.innerHTML
+                middleContent = middleContent + makeHtmlString(nextNode?.nodeName ?? "", htmlString ?? "")
             }
-            middleContent = makeHtmlString(nextNodeName ?? "", content ?? "")
+            pointerNode = nextNode
         }
+        // if (!startNode?.isEqualNode(endNode ?? null)) {
+        //     let pointerNode = startNode
+        //     let pointerNodeName = ""
+        //     let pointerContent = ""
+        //     while (true) {
+        //         pointerNode = pointerNode?.nextSibling
+        //         pointerNodeName = pointerNode?.nodeName ?? ""
+        //         if (pointerNode?.isEqualNode(endNode ?? null)) break
+        //         if (pointerNodeName === "#text") {
+        //             pointerContent = pointerNode?.textContent ?? ""
+        //         } else {
+        //             pointerContent = pointerNode?.firstChild?.parentElement?.innerHTML ?? ""
+        //         }
+        //         middleContent = middleContent + makeHtmlString(pointerNodeName, pointerContent)
+        //     }
+        // }
 
         content = `${startContent}${middleContent}${endContent}`
 
@@ -226,8 +254,8 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
                             const $link = $('#' + inputLinkId)
                             const $text = $('#' + inputTextId)
                             let link = $link.val().trim()
-                            let text = $text.val().trim()
-
+                            // let text = $text.val().trim()
+                            let text = insertContent()
                             // 链接为空，则不插入
                             if (!link) return
                             // 文本为空，则用链接代替

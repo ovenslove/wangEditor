@@ -47,8 +47,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         } else {
             // 选区未处于链接中，直接插入即可
-            console.log(text)
-            // editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
+            editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         }
     }
 
@@ -88,22 +87,18 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
     /**
      * 生成需要插入的html内容的字符串形式
      */
-    function insertContent() {
+    function insertHtml() {
         editor.selection.restoreSelection()
         const selection = window.getSelection()
         const anchorNode = selection?.anchorNode
         const focusNode = selection?.focusNode
         const anchorPos = selection?.anchorOffset
         const focusPos = selection?.focusOffset
-        const anchorParentNode = anchorNode?.parentNode
-        const focusParentNode = focusNode?.parentNode
-        const anchorParentNodeName = anchorNode?.parentNode?.nodeName
-        const focusParentNodeName = focusNode?.parentNode?.nodeName
 
-        let content = ""
-        let startContent: string | undefined = ""
-        let middleContent: string = ""
-        let endContent: string | undefined = ""
+        let content = ''
+        let startContent: string | undefined = ''
+        let middleContent: string = ''
+        let endContent: string | undefined = ''
 
         let startNode = anchorNode
         let endNode = focusNode
@@ -119,94 +114,50 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         let selectContent = startNode?.textContent?.substring(anchorPos ?? 0)
         do {
             startNode = pointerNode
-            startContent = makeHtmlString(startNode?.nodeName ?? "", selectContent ?? "")
+            startContent = makeHtmlString(startNode?.nodeName ?? '', selectContent ?? '')
             selectContent = startContent
             pointerNode = pointerNode?.parentNode
-        } while (pointerNode?.nodeName !== "P")
-        // while(true) {
-        //     if(startNode?.parentNode?.nodeName === "P") break
-        //     if(startNode)
-        // }
-        // let selectContent = startNode?.textContent?.substring(anchorPos ?? 0)
-        // if (startNode?.nodeName !== "#text") {
-        //     startContent = makeHtmlString(anchorParentNodeName ?? "", selectContent ?? "")
-
-        //     while (true) {
-        //         if (startNode?.parentNode?.nodeName === "P") break
-        //         startNode = startNode?.parentNode
-        //         startNodeName = startNode?.nodeName
-        //         startContent = makeHtmlString(startNodeName ?? "", startContent)
-        //     }
-        // } else {
-        //     startNode = anchorNode
-        //     startContent = makeHtmlString(anchorNode.nodeName, selectContent ?? "")
-        // }
-
+        } while (pointerNode?.nodeName !== 'P')
 
         // 结束位置节点的处理
         let endSelectContent = focusNode?.textContent?.substring(0, focusPos)
         pointerNode = focusNode
         do {
             endNode = pointerNode
-            endContent = makeHtmlString(endNode?.nodeName ?? "", endSelectContent ?? "")
+            endContent = makeHtmlString(endNode?.nodeName ?? '', endSelectContent ?? '')
             endSelectContent = endContent
             pointerNode = pointerNode?.parentNode
-        } while (pointerNode?.nodeName !== "P")
-        console.log(startNode)
-        console.log(endNode)
+        } while (pointerNode?.nodeName !== 'P')
 
         // 将直接节点位置放置到开始的节点
-        pointerNode = startNode
+        pointerNode = startNode?.nextSibling
         // 处于开始和结束节点位置之间的节点的处理
         while (!pointerNode?.isEqualNode(endNode ?? null)) {
-            const nextNode = pointerNode?.nextSibling
-            const nextNodeName = nextNode?.nodeName
-            if (nextNodeName === "#text") {
-                middleContent = middleContent + nextNode?.textContent
+            const pointerNodeName = pointerNode?.nodeName
+            if (pointerNodeName === '#text') {
+                middleContent = middleContent + pointerNode?.textContent
             } else {
-                let htmlString = nextNode?.firstChild?.parentElement?.innerHTML
-                middleContent = middleContent + makeHtmlString(nextNode?.nodeName ?? "", htmlString ?? "")
+                let htmlString = pointerNode?.firstChild?.parentElement?.innerHTML
+                middleContent =
+                    middleContent + makeHtmlString(pointerNodeName ?? '', htmlString ?? '')
             }
-            pointerNode = nextNode
+            pointerNode = pointerNode?.nextSibling
         }
-        // if (!startNode?.isEqualNode(endNode ?? null)) {
-        //     let pointerNode = startNode
-        //     let pointerNodeName = ""
-        //     let pointerContent = ""
-        //     while (true) {
-        //         pointerNode = pointerNode?.nextSibling
-        //         pointerNodeName = pointerNode?.nodeName ?? ""
-        //         if (pointerNode?.isEqualNode(endNode ?? null)) break
-        //         if (pointerNodeName === "#text") {
-        //             pointerContent = pointerNode?.textContent ?? ""
-        //         } else {
-        //             pointerContent = pointerNode?.firstChild?.parentElement?.innerHTML ?? ""
-        //         }
-        //         middleContent = middleContent + makeHtmlString(pointerNodeName, pointerContent)
-        //     }
-        // }
 
         content = `${startContent}${middleContent}${endContent}`
 
         return content
-
-
-
     }
-
-
-
 
     /**
      * 生成html的string形式
      */
     function makeHtmlString(tagName: string, content: string): string {
-        if (tagName === "" || tagName === "#text") {
+        if (tagName === '' || tagName === '#text') {
             return content
         }
         tagName = tagName.toLowerCase()
         return `<${tagName}>${content}</${tagName}>`
-
     }
 
     const conf = {
@@ -254,8 +205,20 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
                             const $link = $('#' + inputLinkId)
                             const $text = $('#' + inputTextId)
                             let link = $link.val().trim()
-                            // let text = $text.val().trim()
-                            let text = insertContent()
+                            let text = $text.val().trim()
+                            let html = insertHtml()?.trim()
+                            let htmlText = html?.replace(/<.*?>/g, '')
+                            let htmlTextLen = htmlText?.length ?? 0
+                            // 当input中的text的长度大于等于选区的文字时
+                            // 需要判断两者相同的长度的text内容是否相同
+                            // 相同则只需把多余的部分添加上去即可，否则使用input中的内容
+                            if (htmlTextLen <= text.length) {
+                                let startText = text.substring(0, htmlTextLen)
+                                let endText = text.substring(htmlTextLen)
+                                if (htmlText === startText) {
+                                    text = html + endText
+                                }
+                            }
                             // 链接为空，则不插入
                             if (!link) return
                             // 文本为空，则用链接代替

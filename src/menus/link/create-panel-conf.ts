@@ -47,7 +47,8 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         } else {
             // 选区未处于链接中，直接插入即可
-            editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
+            console.log(text)
+            // editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         }
     }
 
@@ -129,10 +130,23 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             pointerNode = pointerNode?.parentNode
         } while (pointerNode?.nodeName !== 'P')
 
-        // 将直接节点位置放置到开始的节点
-        pointerNode = startNode?.nextSibling
+        if (anchorNode) {
+            console.log(createPartHtml(anchorNode, anchorPos ?? 0))
+        }
+
+        let startNode1
+        let endNode1
+        if (anchorNode) {
+            startNode1 = getTopNode(anchorNode)
+        }
+        if (focusNode) {
+            endNode1 = getTopNode(focusNode)
+        }
+
+        // 将指针节点位置放置到开始的节点
+        pointerNode = startNode1?.nextSibling
         // 处于开始和结束节点位置之间的节点的处理
-        while (!pointerNode?.isEqualNode(endNode ?? null)) {
+        while (!pointerNode?.isEqualNode(endNode1 ?? null)) {
             const pointerNodeName = pointerNode?.nodeName
             if (pointerNodeName === '#text') {
                 middleContent = middleContent + pointerNode?.textContent
@@ -147,6 +161,39 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
         content = `${startContent}${middleContent}${endContent}`
 
         return content
+    }
+
+    /**
+     * 生成开始或者结束位置的html字符片段
+     */
+    function createPartHtml(node: Node, startPos: number, endPost?: number): string {
+        console.log(node)
+        let selectionContent = node.textContent?.substring(startPos, endPost)
+        let pointerNode = node
+        let content = ''
+        do {
+            content = makeHtmlString(pointerNode?.nodeName ?? '', selectionContent ?? '')
+            selectionContent = content
+            if (pointerNode.parentNode) pointerNode = pointerNode?.parentNode
+        } while (pointerNode?.nodeName !== 'P')
+
+        return content
+    }
+
+    /**
+     * 获取除了最外层的P外的顶级Node
+     */
+    function getTopNode(node: Node): Node {
+        let pointerNode: Node = node
+        let topNode: Node
+        do {
+            topNode = pointerNode
+            if (pointerNode.parentNode) {
+                pointerNode = pointerNode?.parentNode
+            }
+        } while (pointerNode?.nodeName !== 'P')
+
+        return topNode
     }
 
     /**

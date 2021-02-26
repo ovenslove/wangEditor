@@ -140,6 +140,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
 
                             let html: string = ''
                             if (selection) html = insertHtml(selection, topNode)?.trim()
+                            console.log(html)
 
                             // 去除html的tag标签
                             let htmlText = html?.replace(/<.*?>/g, '')
@@ -154,6 +155,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
                                     text = html + endText
                                 }
                             }
+                            console.log(text)
                             // 链接为空，则不插入
                             if (!link) return
                             // 文本为空，则用链接代替

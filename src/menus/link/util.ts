@@ -22,12 +22,24 @@ function getTopNode(node: Node, topText: string): Node {
  * @param tagName 标签名
  * @param content 需要包裹的内容
  */
-function makeHtmlString(tagName: string, content: string): string {
-    if (tagName === '' || tagName === '#text') {
+function makeHtmlString(node: Node, content: string): string {
+    let tagName = node.nodeName
+    let attr = ''
+    if (node.nodeType === 3) {
         return content
     }
+    if (node.nodeType === 1) {
+        const style = (node as Element).getAttribute('style')
+        const face = (node as Element).getAttribute('face')
+        const color = (node as Element).getAttribute('color')
+        console.log(tagName)
+        console.log(color)
+        if (style) attr = attr + ` style="${style}"`
+        if (face) attr = attr + ` face="${face}"`
+        if (color) attr = attr + ` color="${color}"`
+    }
     tagName = tagName.toLowerCase()
-    return `<${tagName}>${content}</${tagName}>`
+    return `<${tagName}${attr}>${content}</${tagName}>`
 }
 
 /**
@@ -42,9 +54,9 @@ function createPartHtml(topText: string, node: Node, startPos: number, endPost?:
     let pointerNode = node
     let content = ''
     do {
-        content = makeHtmlString(pointerNode?.nodeName ?? '', selectionContent ?? '')
+        content = makeHtmlString(pointerNode, selectionContent ?? '')
         selectionContent = content
-        if (pointerNode.parentNode) pointerNode = pointerNode?.parentNode
+        if (pointerNode.parentElement) pointerNode = pointerNode?.parentElement
     } while (pointerNode.textContent !== topText)
 
     return content
@@ -62,6 +74,7 @@ function insertHtml(selection: Selection, topNode: Node): string {
     const focusPos = selection.focusOffset
     const topText = topNode.textContent ?? ''
     const TagArr = getContainerTag(topNode)
+    console.log(TagArr)
 
     let content: string = ''
     let startContent: string = ''
@@ -104,7 +117,8 @@ function insertHtml(selection: Selection, topNode: Node): string {
             middleContent = middleContent + pointerNode?.textContent
         } else {
             let htmlString = pointerNode?.firstChild?.parentElement?.innerHTML
-            middleContent = middleContent + makeHtmlString(pointerNodeName ?? '', htmlString ?? '')
+            if (pointerNode)
+                middleContent = middleContent + makeHtmlString(pointerNode, htmlString ?? '')
         }
         pointerNode = pointerNode?.nextSibling ?? pointerNode
     }
@@ -120,12 +134,12 @@ function insertHtml(selection: Selection, topNode: Node): string {
  * 获取包裹在最外层的非p Node tagName 数组
  * @param node 选区所在行的node节点
  */
-function getContainerTag(node: Node): string[] {
+function getContainerTag(node: Node): Node[] {
     const topText = node.textContent ?? ''
     let tagArr = []
     while (node?.textContent === topText) {
         if (node.nodeName !== 'P') {
-            tagArr.push(node.nodeName)
+            tagArr.push(node)
         }
         node = node.childNodes[0]
     }
@@ -137,7 +151,7 @@ function getContainerTag(node: Node): string[] {
  * @param tagArr 最外层包裹的tag数组，索引越小tag越在外面
  * @param content tag要包裹的内容
  */
-function addContainer(tagArr: string[], content: string): string {
+function addContainer(tagArr: Node[], content: string): string {
     tagArr.forEach(v => {
         content = makeHtmlString(v, content)
     })

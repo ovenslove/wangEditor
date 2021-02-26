@@ -1,5 +1,7 @@
 /**
- * 获取除了最外层的P外的顶级Node
+ * 获取除了包裹在整行区域的顶级Node
+ * @param node 最外层node下的某个childNode
+ * @param topText 最外层node中文本内容
  */
 function getTopNode(node: Node, topText: string): Node {
     let pointerNode: Node = node
@@ -17,6 +19,8 @@ function getTopNode(node: Node, topText: string): Node {
 
 /**
  * 生成html的string形式
+ * @param tagName 标签名
+ * @param content 需要包裹的内容
  */
 function makeHtmlString(tagName: string, content: string): string {
     if (tagName === '' || tagName === '#text') {
@@ -28,8 +32,12 @@ function makeHtmlString(tagName: string, content: string): string {
 
 /**
  * 生成开始或者结束位置的html字符片段
+ * @param topText 选区所在的行的文本内容
+ * @param node 选区给出的node节点
+ * @param startPos node文本内容选取的开始位置
+ * @param endPos node文本内容选取的结束位置
  */
-function createPartHtml(node: Node, startPos: number, endPost?: number): string {
+function createPartHtml(topText: string, node: Node, startPos: number, endPost?: number): string {
     let selectionContent = node.textContent?.substring(startPos, endPost)
     let pointerNode = node
     let content = ''
@@ -37,27 +45,23 @@ function createPartHtml(node: Node, startPos: number, endPost?: number): string 
         content = makeHtmlString(pointerNode?.nodeName ?? '', selectionContent ?? '')
         selectionContent = content
         if (pointerNode.parentNode) pointerNode = pointerNode?.parentNode
-    } while (pointerNode?.nodeName !== 'P')
+    } while (pointerNode.textContent !== topText)
 
     return content
 }
 
-function getTopText(node: Node) {
-    let temp = node
-    while (temp.nodeName !== 'P') {
-        if (temp.parentNode) temp = temp?.parentNode
-    }
-    return temp?.textContent
-}
-
 /**
  * 生成需要插入的html内容的字符串形式
+ * @param selection 选区对象
+ * @param topNode 选区所在行的node节点
  */
-function insertHtml(selection: Selection): string {
+function insertHtml(selection: Selection, topNode: Node): string {
     const anchorNode = selection.anchorNode
     const focusNode = selection.focusNode
     const anchorPos = selection.anchorOffset
     const focusPos = selection.focusOffset
+    const topText = topNode.textContent ?? ''
+    const TagArr = getContainerTag(topNode)
 
     let content: string = ''
     let startContent: string = ''
@@ -71,35 +75,29 @@ function insertHtml(selection: Selection): string {
 
     // 节点是同一个的处理
     if (anchorNode?.isEqualNode(focusNode ?? null)) {
-        return createPartHtml(anchorNode, anchorPos, focusPos)
+        let innerContent = createPartHtml(topText, anchorNode, anchorPos, focusPos)
+        innerContent = addContainer(TagArr, innerContent)
+        return innerContent
     }
 
     // 选中开始位置节点的处理
-    if (anchorNode) startContent = createPartHtml(anchorNode, anchorPos ?? 0)
+    if (anchorNode) startContent = createPartHtml(topText, anchorNode, anchorPos ?? 0)
 
     // 结束位置节点的处理
-    if (focusNode) endContent = createPartHtml(focusNode, 0, focusPos)
-
-    if (anchorNode) {
-        console.log(getTopText(anchorNode))
-    }
+    if (focusNode) endContent = createPartHtml(topText, focusNode, 0, focusPos)
 
     // 将指针节点位置放置到开始的节点
     if (anchorNode) {
         // 获取start的非p顶级node
-        startNode = getTopNode(anchorNode, getTopText(anchorNode) ?? '')
+        startNode = getTopNode(anchorNode, topText)
     }
     if (focusNode) {
         // 获取end的非p顶级node
-        endNode = getTopNode(focusNode, getTopText(focusNode) ?? '')
+        endNode = getTopNode(focusNode, topText)
     }
-
-    console.log(startNode)
-    console.log(endNode)
 
     // 处于开始和结束节点位置之间的节点的处理
     pointerNode = startNode?.nextSibling ?? anchorNode
-    console.log(pointerNode)
     while (!pointerNode?.isEqualNode(endNode ?? null)) {
         const pointerNodeName = pointerNode?.nodeName
         if (pointerNodeName === '#text') {
@@ -113,6 +111,36 @@ function insertHtml(selection: Selection): string {
 
     content = `${startContent}${middleContent}${endContent}`
 
+    // 增加最外层包裹标签
+    content = addContainer(TagArr, content)
+
+    return content
+}
+/**
+ * 获取包裹在最外层的非p Node tagName 数组
+ * @param node 选区所在行的node节点
+ */
+function getContainerTag(node: Node): string[] {
+    const topText = node.textContent ?? ''
+    let tagArr = []
+    while (node?.textContent === topText) {
+        if (node.nodeName !== 'P') {
+            tagArr.push(node.nodeName)
+        }
+        node = node.childNodes[0]
+    }
+    return tagArr
+}
+
+/**
+ * 为内容增加包裹标签
+ * @param tagArr 最外层包裹的tag数组，索引越小tag越在外面
+ * @param content tag要包裹的内容
+ */
+function addContainer(tagArr: string[], content: string): string {
+    tagArr.forEach(v => {
+        content = makeHtmlString(v, content)
+    })
     return content
 }
 

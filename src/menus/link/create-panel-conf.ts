@@ -48,7 +48,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
             editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         } else {
             // 选区未处于链接中，直接插入即可
-            // editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
+            editor.cmd.do('insertHTML', `<a href="${link}" target="_blank">${text}</a>`)
         }
     }
 
@@ -128,6 +128,9 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
                         fn: () => {
                             // 获取选取
                             editor.selection.restoreSelection()
+                            const topNode = editor.selection
+                                .getSelectionRangeTopNodes()[0]
+                                .getNode()
                             const selection = window.getSelection()
                             // 执行插入链接
                             const $link = $('#' + inputLinkId)
@@ -136,8 +139,7 @@ export default function (editor: Editor, text: string, link: string): PanelConf 
                             let text = $text.val().trim()
 
                             let html: string = ''
-                            if (selection) html = insertHtml(selection)?.trim()
-                            console.log(html)
+                            if (selection) html = insertHtml(selection, topNode)?.trim()
 
                             // 去除html的tag标签
                             let htmlText = html?.replace(/<.*?>/g, '')

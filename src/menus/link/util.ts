@@ -32,8 +32,6 @@ function makeHtmlString(node: Node, content: string): string {
         const style = (node as Element).getAttribute('style')
         const face = (node as Element).getAttribute('face')
         const color = (node as Element).getAttribute('color')
-        console.log(tagName)
-        console.log(color)
         if (style) attr = attr + ` style="${style}"`
         if (face) attr = attr + ` face="${face}"`
         if (color) attr = attr + ` color="${color}"`
@@ -74,7 +72,6 @@ function insertHtml(selection: Selection, topNode: Node): string {
     const focusPos = selection.focusOffset
     const topText = topNode.textContent ?? ''
     const TagArr = getContainerTag(topNode)
-    console.log(TagArr)
 
     let content: string = ''
     let startContent: string = ''

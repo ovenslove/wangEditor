@@ -55,6 +55,9 @@ class FontColor extends DropListMenu implements MenuActive {
                 editor.selection.createRangeByElem($elems[0])
                 editor.selection.moveCursor($elems[0].elems[0])
             }
+            const range = editor.selection.getRange()
+            range?.setStart($selectionElem, 0)
+            range?.setEnd($selectionElem, 0)
             // 插入空白选区
             editor.selection.createEmptyRange()
         }
